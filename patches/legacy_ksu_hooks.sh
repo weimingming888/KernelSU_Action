@@ -216,7 +216,11 @@ for d in "${WORKSPACE:-}/gcc-64/bin"; do
     for t in "$d"/aarch64-linux-android-*; do
         [ -x "$t" ] || continue
         n=$(basename "$t")
-        dst="/usr/local/bin/aarch64-linux-gnu-${n#aarch64-linux-android-}"
+        suffix="${n#aarch64-linux-android-}"
+        # clang --prefix=$(GCC_TOOLCHAIN_DIR) resolves the external assembler
+        # *inside this directory*, not via PATH, so the alias must live here.
+        ln -sf "$n" "$d/aarch64-linux-gnu-$suffix" 2>/dev/null || true
+        dst="/usr/local/bin/aarch64-linux-gnu-$suffix"
         ln -sf "$t" "$dst" 2>/dev/null || sudo ln -sf "$t" "$dst" 2>/dev/null || true
     done
     echo "[+] binutils aliases for aarch64-linux-gnu-* created"

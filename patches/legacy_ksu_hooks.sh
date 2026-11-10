@@ -96,3 +96,28 @@ else:
     print("[!] reboot.c: hook already present or anchor not found")
 '
 fi
+
+# --- 4.14 toolchain fixes (this script runs inside KERNEL_DIR) -----------
+# (a) Makefile forces -no-integrated-as into *both* KBUILD_CFLAGS and
+#     KBUILD_AFLAGS; on a runner whose /usr/bin/as is x86 this breaks vdso
+#     with "unrecognized option '-EL'". Use clang's integrated assembler.
+# (b) GCC 13 defaults to -fno-common; legacy dtc then fails with multiple
+#     definition of `yylloc`. Put -fcommon in HOSTCFLAGS (not
+#     HOST_EXTRACFLAGS, whose command-line value would suppress
+#     scripts/selinux/genheaders/Makefile's own "+= -I..." and lose
+#     classmap.h).
+if [ -f Makefile ]; then
+python3 -c '
+import io
+p = "Makefile"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+o = s
+s = s.replace("+= -no-integrated-as", "+= -integrated-as", 1)
+s = s.replace("-std=gnu89 $(HOST_LFS_CFLAGS)", "-std=gnu89 -fcommon $(HOST_LFS_CFLAGS)", 1)
+if s != o:
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+    print("[+] Makefile: -integrated-as + HOSTCFLAGS -fcommon")
+else:
+    print("[!] Makefile: patterns not found (already patched?)")
+'
+fi

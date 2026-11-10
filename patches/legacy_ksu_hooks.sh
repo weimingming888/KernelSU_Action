@@ -154,10 +154,10 @@ p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
 if "LD\t\t= ld.lld" not in s:
-    s = s.replace("LD\t\t= $(CROSS_COMPILE)ld\n", "LD\t\t= ld.lld\n", 1)
+    s = s.replace("LD\t\t= ld.lld\n", "LD\t\t= $(CROSS_COMPILE)ld\n", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
-    print("[+] Makefile: LD=ld.lld (vDSO sub-make compatible)")
+    print("[+] Makefile: LD restored to GNU ld for vmlinux final link")
 else:
     print("[!] Makefile: LD pattern not found / already patched")
 '
@@ -183,11 +183,11 @@ import io
 p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
-s = s.replace("+= -no-integrated-as", "+= -no-integrated-as -fuse-ld=lld", 1)
+s = s.replace("+= -no-integrated-as -fuse-ld=lld", "+= -no-integrated-as", 1)
 s = s.replace("KBUILD_CFLAGS\t+= $(CLANG_FLAGS)\n", "KBUILD_CFLAGS\t+= $(CLANG_FLAGS) -integrated-as\n", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
-    print("[+] Makefile: CFLAGS=integrated-as, AFLAGS=GNU as, -fuse-ld=lld")
+    print("[+] Makefile: CFLAGS=integrated-as, AFLAGS=GNU as")
 else:
     print("[!] Makefile: CLANG_FLAGS already patched")
 '

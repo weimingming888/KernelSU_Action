@@ -184,9 +184,10 @@ p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
 s = s.replace("+= -no-integrated-as", "+= -no-integrated-as -fuse-ld=lld", 1)
+s = s.replace("KBUILD_CFLAGS\t+= $(CLANG_FLAGS)\n", "KBUILD_CFLAGS\t+= $(CLANG_FLAGS) -integrated-as\n", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
-    print("[+] Makefile: CLANG_FLAGS -fuse-ld=lld (GNU as kept)")
+    print("[+] Makefile: CFLAGS=integrated-as, AFLAGS=GNU as, -fuse-ld=lld")
 else:
     print("[!] Makefile: CLANG_FLAGS already patched")
 '

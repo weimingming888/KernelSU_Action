@@ -143,3 +143,23 @@ else:
     print("[!] vdso: macro pattern not found (already patched?)")
 '
 fi
+
+# --- 6. linker: make LD=ld.lld visible to *all* sub-makes ------------------
+# Passing LD=ld.lld on the make command line only applies to the top-level
+# make; vDSO's sub-make still resolves LD to the host x86 ld.bfd and fails
+# with "unrecognised emulation mode: aarch64linux". Set it in the Makefile.
+if [ -f Makefile ]; then
+python3 -c '
+import io
+p = "Makefile"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+o = s
+if "LD\t\t= ld.lld" not in s:
+    s = s.replace("LD\t\t= $(CROSS_COMPILE)ld.bfd", "LD\t\t= ld.lld", 1)
+if s != o:
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+    print("[+] Makefile: LD=ld.lld (vDSO sub-make compatible)")
+else:
+    print("[!] Makefile: LD pattern not found / already patched")
+'
+fi

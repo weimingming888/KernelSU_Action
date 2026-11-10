@@ -163,3 +163,46 @@ else:
     print("[!] Makefile: LD pattern not found / already patched")
 '
 fi
+
+# --- 7. clang driver must use lld for *every* link ------------------------
+# vDSO is linked with $(CC), not $(LD), so LD=ld.lld in Makefile is ignored:
+# clang picks the host x86 ld.bfd and fails with "unrecognised emulation
+# mode: aarch64linux". Force lld globally via CLANG_FLAGS, explicitly in
+# vdso's cmd_vdsold, and expose AOSP clang's ld.lld in PATH as a fallback.
+if ! command -v ld.lld >/dev/null 2>&1; then
+    for c in "${CLANG_PATH:-}/ld.lld" "${WORKSPACE:-}/clang/bin/ld.lld"; do
+        if [ -x "$c" ]; then
+            ln -sf "$c" /usr/local/bin/ld.lld 2>/dev/null \
+                || sudo ln -sf "$c" /usr/local/bin/ld.lld 2>/dev/null || true
+            break
+        fi
+    done
+fi
+if [ -f Makefile ]; then
+python3 -c '
+import io
+p = "Makefile"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+o = s
+s = s.replace("+= -integrated-as", "+= -integrated-as -fuse-ld=lld", 1)
+if s != o:
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+    print("[+] Makefile: CLANG_FLAGS -fuse-ld=lld")
+else:
+    print("[!] Makefile: CLANG_FLAGS already patched")
+'
+fi
+python3 -c '
+import io, glob
+n = 0
+for p in glob.glob("arch/arm64/kernel/vdso*/Makefile"):
+    s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+    if "-fuse-ld=lld" in s:
+        continue
+    o = s
+    s = s.replace("cmd_vdsold = $(CC) ", "cmd_vdsold = $(CC) -fuse-ld=lld ", 1)
+    if s != o:
+        io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+        n += 1
+print("[+] vdso cmd_vdsold patched:", n)
+'

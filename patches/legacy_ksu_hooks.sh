@@ -155,7 +155,7 @@ p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
 if "LD\t\t= ld.lld" not in s:
-    s = s.replace("LD\t\t= $(CROSS_COMPILE)ld.bfd", "LD\t\t= ld.lld", 1)
+    s = s.replace("LD\t\t= $(CROSS_COMPILE)ld\n", "LD\t\t= ld.lld\n", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
     print("[+] Makefile: LD=ld.lld (vDSO sub-make compatible)")

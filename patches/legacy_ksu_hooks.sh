@@ -112,11 +112,10 @@ import io
 p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
-s = s.replace("+= -no-integrated-as", "+= -integrated-as", 1)
 s = s.replace("-std=gnu89 $(HOST_LFS_CFLAGS)", "-std=gnu89 -fcommon $(HOST_LFS_CFLAGS)", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
-    print("[+] Makefile: -integrated-as + HOSTCFLAGS -fcommon")
+    print("[+] Makefile: HOSTCFLAGS -fcommon (GNU as kept)")
 else:
     print("[!] Makefile: patterns not found (already patched?)")
 '
@@ -184,10 +183,10 @@ import io
 p = "Makefile"
 s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
 o = s
-s = s.replace("+= -integrated-as", "+= -integrated-as -fuse-ld=lld", 1)
+s = s.replace("+= -no-integrated-as", "+= -no-integrated-as -fuse-ld=lld", 1)
 if s != o:
     io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
-    print("[+] Makefile: CLANG_FLAGS -fuse-ld=lld")
+    print("[+] Makefile: CLANG_FLAGS -fuse-ld=lld (GNU as kept)")
 else:
     print("[!] Makefile: CLANG_FLAGS already patched")
 '
@@ -206,3 +205,20 @@ for p in glob.glob("arch/arm64/kernel/vdso*/Makefile"):
         n += 1
 print("[+] vdso cmd_vdsold patched:", n)
 '
+
+# --- 8. expose AOSP binutils under the GNU triple clang expects ----------
+# CLANG_TRIPLE=aarch64-linux-gnu- is mandatory (AOSP clang errors out on an
+# Android --target), but -no-integrated-as makes clang look for
+# aarch64-linux-gnu-as while the AOSP GCC 4.9 package only ships
+# aarch64-linux-android-*. Provide aliases so external assembly works.
+for d in "${WORKSPACE:-}/gcc-64/bin"; do
+    [ -d "$d" ] || continue
+    for t in "$d"/aarch64-linux-android-*; do
+        [ -x "$t" ] || continue
+        n=$(basename "$t")
+        dst="/usr/local/bin/aarch64-linux-gnu-${n#aarch64-linux-android-}"
+        ln -sf "$t" "$dst" 2>/dev/null || sudo ln -sf "$t" "$dst" 2>/dev/null || true
+    done
+    echo "[+] binutils aliases for aarch64-linux-gnu-* created"
+    break
+done

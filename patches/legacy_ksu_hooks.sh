@@ -74,3 +74,25 @@ for i in "${patch_files[@]}"; do
     esac
 
 done
+
+# ---------------------------------------------------------------------------
+# KernelSU-Next (legacy) gates its Kbuild on the literal string
+# "ksu_handle_sys_reboot" appearing in kernel/reboot.c. The 0.9.x-era hooks
+# above never touched reboot.c, so the build aborts with "No hooks were
+# defined". Insert the real supercall before the CAP_SYS_BOOT check (KSU magic
+# values intentionally fail that check, so the hook must run first).
+# ---------------------------------------------------------------------------
+if ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+    python3 -c '
+import io
+p = "kernel/reboot.c"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+a = "\t/* We only trust the superuser with rebooting the system. */\n"
+h = "#ifdef CONFIG_KSU\n\textern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg);\n\tksu_handle_sys_reboot(magic1, magic2, cmd, &arg);\n#endif\n\n"
+if "ksu_handle_sys_reboot" not in s and a in s:
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s.replace(a, h + a, 1))
+    print("[+] injected ksu_handle_sys_reboot hook into kernel/reboot.c")
+else:
+    print("[!] reboot.c: hook already present or anchor not found")
+'
+fi

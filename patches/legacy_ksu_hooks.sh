@@ -121,3 +121,25 @@ else:
     print("[!] Makefile: patterns not found (already patched?)")
 '
 fi
+
+# --- 5. 4.14 vdso: LLVM integrated assembler vs GNU-as named macro args --
+# gettimeofday.S defines ".macro clock_gettime_return, shift=0" and calls it
+# as "clock_gettime_return, shift=1". GNU as accepts named/default macro
+# arguments; LLVM MC does not ("too many positional arguments"). Split into
+# two parameterless macros so either assembler accepts it.
+if [ -f arch/arm64/kernel/vdso/gettimeofday.S ]; then
+python3 -c '
+import io
+p = "arch/arm64/kernel/vdso/gettimeofday.S"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+old = "\t.macro clock_gettime_return, shift=0\n\t.if \\shift == 1\n\tlsr\tx11, x11, x12\n\t.endif\n\tstp\tx10, x11, [x1, #TSPEC_TV_SEC]\n\tmov\tx0, xzr\n\tret\n\t.endm"
+new = "\t.macro clock_gettime_return\n\tstp\tx10, x11, [x1, #TSPEC_TV_SEC]\n\tmov\tx0, xzr\n\tret\n\t.endm\n\n\t.macro clock_gettime_return_shift\n\tlsr\tx11, x11, x12\n\tstp\tx10, x11, [x1, #TSPEC_TV_SEC]\n\tmov\tx0, xzr\n\tret\n\t.endm"
+if old in s:
+    s = s.replace(old, new, 1)
+    s = s.replace("\tclock_gettime_return, shift=1", "\tclock_gettime_return_shift")
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+    print("[+] vdso: split clock_gettime_return macro (LLVM integrated-as compatible)")
+else:
+    print("[!] vdso: macro pattern not found (already patched?)")
+'
+fi

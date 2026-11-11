@@ -1,6 +1,8 @@
 #!/bin/bash
 # Unconditional 4.14/violet toolchain fixes (no KSU dependency).
-# Runs inside KERNEL_DIR via patches.sh all.
+# patches.sh runs this from REPO_ROOT, so cd into the kernel tree ourselves.
+KERNEL_DIR=${KERNEL_DIR:?KERNEL_DIR must be set}
+cd "$KERNEL_DIR"
 
 # --- 4.14 toolchain fixes (this script runs inside KERNEL_DIR) -----------
 # (a) Makefile forces -no-integrated-as into *both* KBUILD_CFLAGS and

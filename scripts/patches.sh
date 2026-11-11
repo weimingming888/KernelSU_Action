@@ -371,6 +371,8 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
 		hooks)        hooks_patch_apply ;;
 		kpm)          kpm_patch_image "$2" ;;
 		all)
+			# Toolchain fixes must run even when KSU_VARIANT=none (A/B debugging).
+			bash "${REPO_ROOT}/patches/toolchain_fixes.sh"
 			bash "${REPO_ROOT}/patches/toolchain_fixes.sh"
 			# Order matters and this is the tested one (4.19 + SukiSU builtin
 			# + SUSFS 1.5.5, no rejects):

@@ -154,15 +154,28 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update -qq
-          # Kept deliberately lean. The historical list here was copied from the
-          # full AOSP platform build docs and pulled in ~40 packages a kernel
-          # build never touches, several of which no longer exist on current
-          # Ubuntu (python2, lib32ncurses5-dev, ...).
-          sudo apt-get install -y --no-install-recommends \
-            bc bison build-essential ccache cpio curl device-tree-compiler flex \
-            git libelf-dev libssl-dev lz4 make python3 rsync unzip zip zstd \
+          # GitHub runner images already ship the whole toolchain set below.
+          # Only touch apt when a package is genuinely missing: a blind
+          # apt-get update + install adds minutes and fails outright when the
+          # Ubuntu mirrors have DNS trouble.
+          required=(
+            bc bison build-essential ccache cpio curl device-tree-compiler flex
+            git libelf-dev libssl-dev lz4 make python3 rsync unzip zip zstd
             libncurses-dev
+          )
+          missing=()
+          for pkg in "${required[@]}"; do
+            if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q '^install ok installed$'; then
+              missing+=("$pkg")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Installing missing packages: ${missing[*]}"
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends "${missing[@]}"
+          else
+            echo "All build dependencies are preinstalled; skipping apt."
+          fi
           mkdir -p "$WORKSPACE"
 
       - name: Set up toolchain

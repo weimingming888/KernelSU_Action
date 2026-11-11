@@ -134,3 +134,20 @@ for d in "${WORKSPACE:-}/gcc-64/bin"; do
     echo "[+] binutils aliases for aarch64-linux-gnu-* created"
     break
 done
+
+# --- 9. accept stock V12.5.4.0 vendor modules --------------------------
+# vendor.img modules carry vermagic "4.14.117-perf-g288905b ... modversions".
+# Force the kernel's VERMAGIC_STRING to that exact value; combined with
+# CONFIG_MODVERSIONS=n / CONFIG_MODULE_SIG=n from the profile, wlan.ko and
+# audio_*.ko load without vermagic / CRC / signature rejection.
+python3 -c '
+import io
+p = "include/linux/vermagic.h"
+s = io.open(p, encoding="utf-8", errors="surrogateescape").read()
+if "STOCK_VERMAGIC_OVERRIDE" not in s:
+    s += "\n/* STOCK_VERMAGIC_OVERRIDE: accept V12.5.4.0 vendor modules */\n#undef VERMAGIC_STRING\n#define VERMAGIC_STRING \"4.14.117-perf-g288905b SMP preempt mod_unload modversions aarch64\"\n"
+    io.open(p, "w", encoding="utf-8", errors="surrogateescape").write(s)
+    print("[+] vermagic: forced to stock V12.5.4.0 string")
+else:
+    print("[!] vermagic already overridden")
+'

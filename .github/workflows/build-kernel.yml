@@ -132,15 +132,16 @@ jobs:
 
       - name: Free up disk space
         if: env.REMOVE_UNUSED_PACKAGES == 'true'
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-        with:
-          tool-cache: true
-          android: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
+        run: |
+          # Pure filesystem cleanup. The third-party action used apt-get remove
+          # + autoremove, which stripped preinstalled build packages and forced
+          # a network apt install on every run. Deleting big cached directories
+          # is enough for a kernel build and never touches dpkg/apt.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/local/.ghcup /usr/lib/jvm \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/powershell \
+            /usr/share/swift /var/lib/docker || true
+          df -h /
 
       - name: Add swap space
         run: |
@@ -154,25 +155,39 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          # GitHub runner images already ship the whole toolchain set below.
-          # Only touch apt when a package is genuinely missing: a blind
-          # apt-get update + install adds minutes and fails outright when the
-          # Ubuntu mirrors have DNS trouble.
-          required=(
-            bc bison build-essential ccache cpio curl device-tree-compiler flex
-            git libelf-dev libssl-dev lz4 make python3 rsync unzip zip zstd
-            libncurses-dev
+          # Use everything already present in the runner image. Apt is only
+          # contacted when an actual executable or header file is missing.
+          bins=(
+            bc:bc bison:bison gcc:build-essential g++:build-essential make:make
+            ccache:ccache cpio:cpio curl:curl dtc:device-tree-compiler flex:flex
+            git:git lz4:lz4 python3:python3 rsync:rsync unzip:unzip zip:zip
+            zstd:zstd ld:binutils
+          )
+          headers=(
+            /usr/include/libelf.h:libelf-dev
+            /usr/include/openssl/ssl.h:libssl-dev
+            /usr/include/ncurses.h:libncurses-dev
           )
           missing=()
-          for pkg in "${required[@]}"; do
-            if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q '^install ok installed$'; then
-              missing+=("$pkg")
-            fi
+          for pair in "${bins[@]}"; do
+            bin="${pair%%:*}"; pkg="${pair#*:}"
+            command -v "$bin" >/dev/null 2>&1 || missing+=("$pkg")
+          done
+          for pair in "${headers[@]}"; do
+            hdr="${pair%%:*}"; pkg="${pair#*:}"
+            [ -f "$hdr" ] || missing+=("$pkg")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "Installing missing packages: ${missing[*]}"
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends "${missing[@]}"
+            # Deduplicate while preserving order.
+            unique=()
+            for pkg in "${missing[@]}"; do
+              [[ " ${unique[*]} " == *" $pkg "* ]] || unique+=("$pkg")
+            done
+            echo "Installing missing packages: ${unique[*]}"
+            sudo apt-get update -qq -o Acquire::Retries=1 -o Acquire::http::Timeout=20
+            sudo apt-get install -y --no-install-recommends \
+              -o Acquire::Retries=1 -o Acquire::http::Timeout=20 \
+              "${unique[@]}"
           else
             echo "All build dependencies are preinstalled; skipping apt."
           fi

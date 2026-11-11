@@ -135,7 +135,9 @@ for d in "${WORKSPACE:-}/gcc-64/bin"; do
     break
 done
 
-# --- 9. accept stock V12.5.4.0 vendor modules --------------------------
+# --- 9. optional: accept stock V12.5.4.0 vendor modules ---------------
+# Controlled by FORCE_STOCK_VERMAGIC; OFF for the zero-modification baseline.
+if [ "${FORCE_STOCK_VERMAGIC:-false}" = "true" ]; then
 # vendor.img modules carry vermagic "4.14.117-perf-g288905b ... modversions".
 # Force the kernel's VERMAGIC_STRING to that exact value; combined with
 # CONFIG_MODVERSIONS=n / CONFIG_MODULE_SIG=n from the profile, wlan.ko and
@@ -151,3 +153,4 @@ if "STOCK_VERMAGIC_OVERRIDE" not in s:
 else:
     print("[!] vermagic already overridden")
 '
+fi

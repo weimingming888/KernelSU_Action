@@ -98,7 +98,7 @@ permissions:
 jobs:
   build:
     name: Build ${{ inputs.config }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     outputs:
       device: ${{ steps.meta.outputs.device }}
@@ -237,7 +237,7 @@ jobs:
     name: Publish release
     needs: build
     if: inputs.publish_release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:

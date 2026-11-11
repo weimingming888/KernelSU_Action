@@ -373,7 +373,6 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
 		all)
 			# Toolchain fixes must run even when KSU_VARIANT=none (A/B debugging).
 			bash "${REPO_ROOT}/patches/toolchain_fixes.sh"
-			bash "${REPO_ROOT}/patches/toolchain_fixes.sh"
 			# Order matters and this is the tested one (4.19 + SukiSU builtin
 			# + SUSFS 1.5.5, no rejects):
 			#   path_umount and the hook patches both key off textual anchors

@@ -82,7 +82,7 @@ declare -A DEFAULTS=(
 
 	# Runner
 	[ENABLE_CCACHE]="true"
-	[REMOVE_UNUSED_PACKAGES]="true"
+	[REMOVE_UNUSED_PACKAGES]="false"
 )
 
 # Legacy spellings that must keep working for existing forks' config.env files.

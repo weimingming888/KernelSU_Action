@@ -131,7 +131,7 @@ jobs:
         run: bash scripts/config.sh
 
       - name: Free up disk space
-        if: env.REMOVE_UNUSED_PACKAGES == 'true'
+        if: false   # disk cleanup disabled by default to speed up builds
         run: |
           # Pure filesystem cleanup. The third-party action used apt-get remove
           # + autoremove, which stripped preinstalled build packages and forced

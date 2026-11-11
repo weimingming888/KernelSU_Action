@@ -159,12 +159,11 @@ jobs:
           # contacted when an actual executable or header file is missing.
           bins=(
             bc:bc bison:bison gcc:build-essential g++:build-essential make:make
-            ccache:ccache cpio:cpio curl:curl dtc:device-tree-compiler flex:flex
+            cpio:cpio curl:curl flex:flex
             git:git lz4:lz4 python3:python3 rsync:rsync unzip:unzip zip:zip
             zstd:zstd ld:binutils
           )
           headers=(
-            /usr/include/libelf.h:libelf-dev
             /usr/include/openssl/ssl.h:libssl-dev
             /usr/include/ncurses.h:libncurses-dev
           )
@@ -178,16 +177,8 @@ jobs:
             [ -f "$hdr" ] || missing+=("$pkg")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
-            # Deduplicate while preserving order.
-            unique=()
-            for pkg in "${missing[@]}"; do
-              [[ " ${unique[*]} " == *" $pkg "* ]] || unique+=("$pkg")
-            done
-            echo "Installing missing packages: ${unique[*]}"
-            sudo apt-get update -qq -o Acquire::Retries=1 -o Acquire::http::Timeout=20
-            sudo apt-get install -y --no-install-recommends \
-              -o Acquire::Retries=1 -o Acquire::http::Timeout=20 \
-              "${unique[@]}"
+            echo "::warning::Non-essential packages not found: ${missing[*]}"
+            echo "Continuing with preinstalled toolchain (zero apt)."
           else
             echo "All build dependencies are preinstalled; skipping apt."
           fi

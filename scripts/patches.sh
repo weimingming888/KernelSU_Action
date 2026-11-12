@@ -371,6 +371,13 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
 		hooks)        hooks_patch_apply ;;
 		kpm)          kpm_patch_image "$2" ;;
 		all)
+			# Install the stock IKCONFIG-derived defconfig into the kernel tree
+			# so build.sh can use KERNEL_CONFIG=violet-perf_defconfig.
+			if [ -f "${REPO_ROOT}/config/violet-perf_defconfig" ]; then
+				cp "${REPO_ROOT}/config/violet-perf_defconfig" \
+					"${KERNEL_DIR}/arch/${ARCH}/configs/violet-perf_defconfig";
+				ok "stock IKCONFIG defconfig installed";
+			fi
 			# Toolchain fixes must run even when KSU_VARIANT=none (A/B debugging).
 			bash "${REPO_ROOT}/patches/toolchain_fixes.sh"
 			# Order matters and this is the tested one (4.19 + SukiSU builtin

@@ -25,7 +25,12 @@ prepare_defconfig() {
 	# ship a full custom defconfig (e.g. config/violet-perf-bootable_defconfig)
 	# that is not present in the upstream kernel tree, by copying it into
 	# arch/${ARCH}/configs/ before the rest of the logic runs.
-	local repo_defconfig="${WORKSPACE%/*}/KernelSU_Action/config/${KERNEL_CONFIG}"
+	# Locate the repo root (where config/ lives) via git, robust to layout.
+	local repo_root="$(cd "${KERNEL_DIR}" && git rev-parse --show-toplevel 2>/dev/null || echo "${WORKSPACE%/*}")"
+	local repo_defconfig="${repo_root}/config/${KERNEL_CONFIG}"
+	if [ ! -f "$repo_defconfig" ]; then
+		repo_defconfig="${repo_root}/${KERNEL_CONFIG}"
+	fi
 	if [ -f "$repo_defconfig" ] && [ ! -f "$DEFCONFIG_PATH" ]; then
 		mkdir -p "$(dirname "$DEFCONFIG_PATH" )"
 		cp "$repo_defconfig" "$DEFCONFIG_PATH"

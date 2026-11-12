@@ -20,6 +20,17 @@ DEFCONFIG_PATH="${KERNEL_DIR}/arch/${ARCH}/configs/${KERNEL_CONFIG}"
 
 prepare_defconfig() {
 	group "Preparing defconfig"
+
+	# Use a repo-local defconfig override when one exists. This lets a fork
+	# ship a full custom defconfig (e.g. config/violet-perf-bootable_defconfig)
+	# that is not present in the upstream kernel tree, by copying it into
+	# arch/${ARCH}/configs/ before the rest of the logic runs.
+	local repo_defconfig="${WORKSPACE%/*}/KernelSU_Action/config/${KERNEL_CONFIG}"
+	if [ -f "$repo_defconfig" ] && [ ! -f "$DEFCONFIG_PATH" ]; then
+		mkdir -p "$(dirname "$DEFCONFIG_PATH" )"
+		cp "$repo_defconfig" "$DEFCONFIG_PATH"
+		info "using repo-local defconfig: config/${KERNEL_CONFIG}"
+	fi
 	[ -f "$DEFCONFIG_PATH" ] \
 		|| die "defconfig not found: arch/${ARCH}/configs/${KERNEL_CONFIG}
        Available: $(ls "${KERNEL_DIR}/arch/${ARCH}/configs/" | head -20 | tr '\n' ' ')"
